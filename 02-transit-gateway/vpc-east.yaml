@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: East VPC (us-east-1) for Transit Gateway lab
+
+Parameters:
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key pair for SSH access
+  MyIPAddress:
+    Type: String
+    Description: Your public IP in CIDR format (e.g. 1.2.3.4/32)
+  TGWEastId:
+    Type: String
+    Description: East Transit Gateway ID for cross-region routing
+
+Resources:
+
+  # --- VPC ---
+  VPCEast:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: vpc-east
+
+  # --- Internet Gateway ---
+  IGWEast:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: igw-east
+
+  AttachIGWEast:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPCEast
+      InternetGatewayId: !Ref IGWEast
+
+  # --- Public Subnet ---
+  PublicSubnetEast:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCEast
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: public-subnet-east
+
+  # --- Private Subnet (for TGW attachment) ---
+  PrivateSubnetEast:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCEast
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: private-subnet-east
+
+  # --- Public Route Table ---
+  PublicRTEast:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCEast
+      Tags:
+        - Key: Name
+          Value: public-rt-east
+
+  PublicRouteEast:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIGWEast
+    Properties:
+      RouteTableId: !Ref PublicRTEast
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGWEast
+
+  PublicSubnetRTAssocEast:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetEast
+      RouteTableId: !Ref PublicRTEast
+
+  # --- Route to West via TGW ---
+  RouteToWest:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRTEast
+      DestinationCidrBlock: 10.1.0.0/16
+      TransitGatewayId: !Ref TGWEastId
+
+  # --- Security Group ---
+  SGEast:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and inter-VPC traffic
+      VpcId: !Ref VPCEast
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyIPAddress
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.1.0.0/16
+      Tags:
+        - Key: Name
+          Value: sg-east
+
+  # --- EC2 Instance ---
+  InstanceEast:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref PublicSubnetEast
+      SecurityGroupIds:
+        - !Ref SGEast
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2}}'
+      Tags:
+        - Key: Name
+          Value: ec2-east
+
+  # --- Elastic IP ---
+  EIPEast:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref InstanceEast
+      Tags:
+        - Key: Name
+          Value: eip-east
+
+Outputs:
+  VPCEastId:
+    Value: !Ref VPCEast
+    Export:
+      Name: VPCEastId
+  PrivateSubnetEastId:
+    Value: !Ref PrivateSubnetEast
+    Export:
+      Name: PrivateSubnetEastId
+  PublicIPEast:
+    Value: !Ref EIPEast
+    Description: Public IP of East EC2 instance
+  InstanceEastId:
+    Value: !Ref InstanceEast

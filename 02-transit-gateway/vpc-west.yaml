@@ -1,0 +1,152 @@
+Here's the updated vpc-west.yaml with the TGW parameter and route added:
+yamlAWSTemplateFormatVersion: '2010-09-09'
+Description: West VPC (us-west-2) for Transit Gateway lab
+
+Parameters:
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key pair for SSH access
+  MyIPAddress:
+    Type: String
+    Description: Your public IP in CIDR format (e.g. 1.2.3.4/32)
+  TGWWestId:
+    Type: String
+    Description: West Transit Gateway ID for cross-region routing
+
+Resources:
+
+  # --- VPC ---
+  VPCWest:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: vpc-west
+
+  # --- Internet Gateway ---
+  IGWWest:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: igw-west
+
+  AttachIGWWest:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPCWest
+      InternetGatewayId: !Ref IGWWest
+
+  # --- Public Subnet ---
+  PublicSubnetWest:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCWest
+      CidrBlock: 10.1.1.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: public-subnet-west
+
+  # --- Private Subnet (for TGW attachment) ---
+  PrivateSubnetWest:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCWest
+      CidrBlock: 10.1.2.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: private-subnet-west
+
+  # --- Public Route Table ---
+  PublicRTWest:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCWest
+      Tags:
+        - Key: Name
+          Value: public-rt-west
+
+  PublicRouteWest:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIGWWest
+    Properties:
+      RouteTableId: !Ref PublicRTWest
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGWWest
+
+  PublicSubnetRTAssocWest:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetWest
+      RouteTableId: !Ref PublicRTWest
+
+  # --- Route to East via TGW ---
+  RouteToEast:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRTWest
+      DestinationCidrBlock: 10.0.0.0/16
+      TransitGatewayId: !Ref TGWWestId
+
+  # --- Security Group ---
+  SGWest:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and inter-VPC traffic
+      VpcId: !Ref VPCWest
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyIPAddress
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: sg-west
+
+  # --- EC2 Instance ---
+  InstanceWest:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref PublicSubnetWest
+      SecurityGroupIds:
+        - !Ref SGWest
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2}}'
+      Tags:
+        - Key: Name
+          Value: ec2-west
+
+  # --- Elastic IP ---
+  EIPWest:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref InstanceWest
+      Tags:
+        - Key: Name
+          Value: eip-west
+
+Outputs:
+  VPCWestId:
+    Value: !Ref VPCWest
+    Export:
+      Name: VPCWestId
+  PrivateSubnetWestId:
+    Value: !Ref PrivateSubnetWest
+    Export:
+      Name: PrivateSubnetWestId
+  PublicIPWest:
+    Value: !Ref EIPWest
+    Description: Public IP of West EC2 instance
+  InstanceWestId:
+    Value: !Ref InstanceWest

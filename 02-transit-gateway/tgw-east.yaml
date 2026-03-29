@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: East Transit Gateway and VPC attachment
+
+Parameters:
+  VPCEastId:
+    Type: String
+    Description: VPC ID from East stack
+  PrivateSubnetEastId:
+    Type: String
+    Description: Private Subnet ID from East stack
+
+Resources:
+
+  # --- Transit Gateway (East) ---
+  TGWEast:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      AmazonSideAsn: 64512
+      AutoAcceptSharedAttachments: enable
+      DefaultRouteTableAssociation: enable
+      DefaultRouteTablePropagation: enable
+      Description: East Transit Gateway
+      Tags:
+        - Key: Name
+          Value: tgw-east
+
+  # --- TGW Attachment to East VPC ---
+  TGWAttachmentEast:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TGWEast
+      VpcId: !Ref VPCEastId
+      SubnetIds:
+        - !Ref PrivateSubnetEastId
+      Tags:
+        - Key: Name
+          Value: tgw-attach-east
+
+Outputs:
+  TGWEastId:
+    Value: !Ref TGWEast
+    Description: East Transit Gateway ID
+  TGWAttachmentEastId:
+    Value: !Ref TGWAttachmentEast
+    Description: East TGW Attachment ID
