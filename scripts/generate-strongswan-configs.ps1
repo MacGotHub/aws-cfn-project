@@ -5,6 +5,12 @@
 # Strongswan and Bird configs for both sites
 # ============================================
 
+function Write-UnixFile {
+    param($Path, $Content)
+    $Content = $Content -replace "`r`n", "`n"
+    [System.IO.File]::WriteAllText($Path, $Content)
+}
+
 function Parse-VPNConfig {
     param($XmlFile)
     [xml]$config = Get-Content $XmlFile
@@ -394,15 +400,13 @@ Write-Host "`nWriting config files..." -ForegroundColor Cyan
 New-Item -Path "scripts\site1-configs" -ItemType Directory -Force | Out-Null
 New-Item -Path "scripts\site2-configs" -ItemType Directory -Force | Out-Null
 
-$Site1IpsecConf  | Set-Content "scripts\site1-configs\ipsec.conf"     -Encoding ASCII
-$Site1Secrets    | Set-Content "scripts\site1-configs\ipsec.secrets"   -Encoding ASCII
-$Site1VtiScript  | Set-Content "scripts\site1-configs\ipsec-vti.sh"   -Encoding ASCII
-$Site1BirdConf   | Set-Content "scripts\site1-configs\bird.conf"       -Encoding ASCII
-
-$Site2IpsecConf  | Set-Content "scripts\site2-configs\ipsec.conf"     -Encoding ASCII
-$Site2Secrets    | Set-Content "scripts\site2-configs\ipsec.secrets"   -Encoding ASCII
-$Site2VtiScript  | Set-Content "scripts\site2-configs\ipsec-vti.sh"   -Encoding ASCII
-$Site2BirdConf   | Set-Content "scripts\site2-configs\bird.conf"       -Encoding ASCII
+Write-UnixFile "scripts\site1-configs\ipsec.conf" $Site1IpsecConf
+Write-UnixFile "scripts\site1-configs\ipsec.secrets" $Site1Secrets
+Write-UnixFile "scripts\site1-configs\bird.conf" $Site1BirdConf
+Write-UnixFile "scripts\site2-configs\ipsec.conf" $Site2IpsecConf
+Write-UnixFile "scripts\site2-configs\ipsec.secrets" $Site2Secrets
+Write-UnixFile "scripts\site2-configs\ipsec-vti.sh" $Site2VtiScript
+Write-UnixFile "scripts\site2-configs\bird.conf" $Site2BirdConf
 
 Write-Host "`n============================================" -ForegroundColor Green
 Write-Host "Config files generated!" -ForegroundColor Green
