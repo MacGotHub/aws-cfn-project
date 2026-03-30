@@ -11,6 +11,10 @@ Parameters:
   TGWEastId:
     Type: String
     Description: East Transit Gateway ID for cross-region routing
+    Default: ""
+
+Conditions:
+  HasTGW: !Not [!Equals [!Ref TGWEastId, ""]]
 
 Resources:
 
@@ -85,9 +89,10 @@ Resources:
       SubnetId: !Ref PublicSubnetEast
       RouteTableId: !Ref PublicRTEast
 
-  # --- Route to West via TGW ---
+  # --- Route to West via TGW (only created if TGW exists) ---
   RouteToWest:
     Type: AWS::EC2::Route
+    Condition: HasTGW
     Properties:
       RouteTableId: !Ref PublicRTEast
       DestinationCidrBlock: 10.1.0.0/16

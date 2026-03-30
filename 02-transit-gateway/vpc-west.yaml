@@ -1,5 +1,4 @@
-Here's the updated vpc-west.yaml with the TGW parameter and route added:
-yamlAWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Description: West VPC (us-west-2) for Transit Gateway lab
 
 Parameters:
@@ -12,6 +11,10 @@ Parameters:
   TGWWestId:
     Type: String
     Description: West Transit Gateway ID for cross-region routing
+    Default: ""
+
+Conditions:
+  HasTGW: !Not [!Equals [!Ref TGWWestId, ""]]
 
 Resources:
 
@@ -86,9 +89,10 @@ Resources:
       SubnetId: !Ref PublicSubnetWest
       RouteTableId: !Ref PublicRTWest
 
-  # --- Route to East via TGW ---
+  # --- Route to East via TGW (only created if TGW exists) ---
   RouteToEast:
     Type: AWS::EC2::Route
+    Condition: HasTGW
     Properties:
       RouteTableId: !Ref PublicRTWest
       DestinationCidrBlock: 10.0.0.0/16
