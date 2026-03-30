@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VGW and VPN connections for West VPC (us-west-2)
+
+Parameters:
+  VPCWestId:
+    Type: String
+    Description: West VPC ID
+  Site1PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 1
+  Site2PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 2
+
+Resources:
+
+  # --- Virtual Private Gateway ---
+  VGWWest:
+    Type: AWS::EC2::VPNGateway
+    Properties:
+      Type: ipsec.1
+      AmazonSideAsn: 64513
+      Tags:
+        - Key: Name
+          Value: vgw-west
+
+  # --- Attach VGW to West VPC ---
+  VGWAttachWest:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPCWestId
+      VpnGatewayId: !Ref VGWWest
+
+  # --- Customer Gateway Site 1 ---
+  CGWSite1West:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65001
+      IpAddress: !Ref Site1PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site1-west
+
+  # --- Customer Gateway Site 2 ---
+  CGWSite2West:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65002
+      IpAddress: !Ref Site2PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site2-west
+
+  # --- VPN Connection Site 1 to West ---
+  VPNSite1West:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite1West
+      VpnGatewayId: !Ref VGWWest
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site1-west
+
+  # --- VPN Connection Site 2 to West ---
+  VPNSite2West:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite2West
+      VpnGatewayId: !Ref VGWWest
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site2-west
+
+  # --- Enable route propagation from VGW to West VPC route table ---
+  VGWRoutePropagationWest:
+    Type: AWS::EC2::VPNGatewayRoutePropagation
+    DependsOn: VGWAttachWest
+    Properties:
+      RouteTableIds:
+        - rtb-0c8f9f7662819c9bf
+      VpnGatewayId: !Ref VGWWest
+
+Outputs:
+  VGWWestId:
+    Value: !Ref VGWWest
+    Description: West Virtual Private Gateway ID
+  VPNSite1WestId:
+    Value: !Ref VPNSite1West
+    Description: VPN Connection ID Site 1 to West
+  VPNSite2WestId:
+    Value: !Ref VPNSite2West
+    Description: VPN Connection ID Site 2 to West

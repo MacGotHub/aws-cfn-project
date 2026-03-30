@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VGW and VPN connections for East VPC (us-east-1)
+
+Parameters:
+  VPCEastId:
+    Type: String
+    Description: East VPC ID
+  Site1PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 1
+  Site2PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 2
+
+Resources:
+
+  # --- Virtual Private Gateway ---
+  VGWEast:
+    Type: AWS::EC2::VPNGateway
+    Properties:
+      Type: ipsec.1
+      AmazonSideAsn: 64512
+      Tags:
+        - Key: Name
+          Value: vgw-east
+
+  # --- Attach VGW to East VPC ---
+  VGWAttachEast:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPCEastId
+      VpnGatewayId: !Ref VGWEast
+
+  # --- Customer Gateway Site 1 ---
+  CGWSite1:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65001
+      IpAddress: !Ref Site1PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site1
+
+  # --- Customer Gateway Site 2 ---
+  CGWSite2:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65002
+      IpAddress: !Ref Site2PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site2
+
+  # --- VPN Connection Site 1 to East ---
+  VPNSite1East:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite1
+      VpnGatewayId: !Ref VGWEast
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site1-east
+
+  # --- VPN Connection Site 2 to East ---
+  VPNSite2East:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite2
+      VpnGatewayId: !Ref VGWEast
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site2-east
+
+  # --- Enable route propagation from VGW to East VPC route table ---
+  VGWRoutePropagation:
+    Type: AWS::EC2::VPNGatewayRoutePropagation
+    DependsOn: VGWAttachEast
+    Properties:
+      RouteTableIds:
+        - rtb-0fa7ab2a60f78df4c
+      VpnGatewayId: !Ref VGWEast
+
+Outputs:
+  VGWEastId:
+    Value: !Ref VGWEast
+    Description: East Virtual Private Gateway ID
+  VPNSite1EastId:
+    Value: !Ref VPNSite1East
+    Description: VPN Connection ID Site 1 to East
+  VPNSite2EastId:
+    Value: !Ref VPNSite2East
+    Description: VPN Connection ID Site 2 to East
