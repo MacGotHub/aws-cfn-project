@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: TGW-based VPN connections for East region (us-east-1)
+
+Parameters:
+  TGWEastId:
+    Type: String
+    Description: East Transit Gateway ID
+  Site1PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 1
+  Site2PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 2
+  EastPublicRTId:
+    Type: String
+    Description: East VPC public route table ID
+
+Resources:
+
+  # --- Customer Gateway Site 1 ---
+  CGWSite1East:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65001
+      IpAddress: !Ref Site1PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site1-east
+
+  # --- Customer Gateway Site 2 ---
+  CGWSite2East:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65002
+      IpAddress: !Ref Site2PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site2-east
+
+  # --- VPN Connection Site 1 to TGW East ---
+  VPNSite1TGWEast:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite1East
+      TransitGatewayId: !Ref TGWEastId
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site1-tgw-east
+
+  # --- VPN Connection Site 2 to TGW East ---
+  VPNSite2TGWEast:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite2East
+      TransitGatewayId: !Ref TGWEastId
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site2-tgw-east
+
+Outputs:
+  VPNSite1EastId:
+    Value: !Ref VPNSite1TGWEast
+    Description: VPN Connection ID Site 1 to TGW East
+  VPNSite2EastId:
+    Value: !Ref VPNSite2TGWEast
+    Description: VPN Connection ID Site 2 to TGW East
+  CGWSite1EastId:
+    Value: !Ref CGWSite1East
+    Description: Customer Gateway ID Site 1 East
+  CGWSite2EastId:
+    Value: !Ref CGWSite2East
+    Description: Customer Gateway ID Site 2 East

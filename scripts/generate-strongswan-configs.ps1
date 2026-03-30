@@ -5,6 +5,8 @@
 # Strongswan and Bird configs for both sites
 # ============================================
 
+Set-Location $PSScriptRoot\..
+
 function Write-UnixFile {
     param($Path, $Content)
     $Content = $Content -replace "`r`n", "`n"
@@ -33,10 +35,10 @@ function Parse-VPNConfig {
 
 # Parse all 4 XML files
 Write-Host "Parsing VPN config files..." -ForegroundColor Cyan
-$S1E = Parse-VPNConfig "03-site-to-site-vpn\vpn-site1-east-config.xml"
-$S1W = Parse-VPNConfig "03-site-to-site-vpn\vpn-site1-west-config.xml"
-$S2E = Parse-VPNConfig "03-site-to-site-vpn\vpn-site2-east-config.xml"
-$S2W = Parse-VPNConfig "03-site-to-site-vpn\vpn-site2-west-config.xml"
+$S1E = Parse-VPNConfig "$PSScriptRoot\..\03-site-to-site-vpn\vpn-site1-east-config.xml"
+$S1W = Parse-VPNConfig "$PSScriptRoot\..\03-site-to-site-vpn\vpn-site1-west-config.xml"
+$S2E = Parse-VPNConfig "$PSScriptRoot\..\03-site-to-site-vpn\vpn-site2-east-config.xml"
+$S2W = Parse-VPNConfig "$PSScriptRoot\..\03-site-to-site-vpn\vpn-site2-west-config.xml"
 
 $Site1IP = $S1E[0].CGW_Outside
 $Site2IP = $S2E[0].CGW_Outside

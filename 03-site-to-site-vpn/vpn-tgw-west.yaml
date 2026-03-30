@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: TGW-based VPN connections for West region (us-west-2)
+
+Parameters:
+  TGWWestId:
+    Type: String
+    Description: West Transit Gateway ID
+  Site1PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 1
+  Site2PublicIP:
+    Type: String
+    Description: Public IP of Strongswan on-prem Site 2
+  WestPublicRTId:
+    Type: String
+    Description: West VPC public route table ID
+
+Resources:
+
+  # --- Customer Gateway Site 1 ---
+  CGWSite1West:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65001
+      IpAddress: !Ref Site1PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site1-west
+
+  # --- Customer Gateway Site 2 ---
+  CGWSite2West:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65002
+      IpAddress: !Ref Site2PublicIP
+      Tags:
+        - Key: Name
+          Value: cgw-site2-west
+
+  # --- VPN Connection Site 1 to TGW West ---
+  VPNSite1TGWWest:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite1West
+      TransitGatewayId: !Ref TGWWestId
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site1-tgw-west
+
+  # --- VPN Connection Site 2 to TGW West ---
+  VPNSite2TGWWest:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref CGWSite2West
+      TransitGatewayId: !Ref TGWWestId
+      StaticRoutesOnly: false
+      Tags:
+        - Key: Name
+          Value: vpn-site2-tgw-west
+
+Outputs:
+  VPNSite1WestId:
+    Value: !Ref VPNSite1TGWWest
+    Description: VPN Connection ID Site 1 to TGW West
+  VPNSite2WestId:
+    Value: !Ref VPNSite2TGWWest
+    Description: VPN Connection ID Site 2 to TGW West
+  CGWSite1WestId:
+    Value: !Ref CGWSite1West
+    Description: Customer Gateway ID Site 1 West
+  CGWSite2WestId:
+    Value: !Ref CGWSite2West
+    Description: Customer Gateway ID Site 2 West
