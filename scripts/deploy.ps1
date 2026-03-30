@@ -139,56 +139,48 @@ aws cloudformation deploy `
         MyIPAddress=$MY_IP `
     --region us-west-2
 
-Write-Host "`n=== Step 8: Deploying VPN Connections ===" -ForegroundColor Cyan
-$Site1IP = (aws cloudformation describe-stacks `
-    --stack-name onprem-east-stack `
-    --query 'Stacks[0].Outputs[?OutputKey==`StrongswanEastPublicIP`].OutputValue' `
-    --output text --region us-east-1)
-
-$Site2IP = (aws cloudformation describe-stacks `
-    --stack-name onprem-west-stack `
-    --query 'Stacks[0].Outputs[?OutputKey==`StrongswanWestPublicIP`].OutputValue' `
-    --output text --region us-west-2)
-
+Write-Host "`n=== Step 8: Deploying TGW-based VPN Connections ===" -ForegroundColor Cyan
 aws cloudformation deploy `
-    --template-file 03-site-to-site-vpn/vpn-east.yaml `
-    --stack-name vpn-east-stack `
+    --template-file 03-site-to-site-vpn/vpn-tgw-east.yaml `
+    --stack-name vpn-tgw-east-stack `
     --parameter-overrides `
-        VPCEastId=$VPCEastId `
+        TGWEastId=$TGWEastId `
         Site1PublicIP=$Site1IP `
         Site2PublicIP=$Site2IP `
+        EastPublicRTId=$EastPublicRT `
     --region us-east-1
 
 aws cloudformation deploy `
-    --template-file 03-site-to-site-vpn/vpn-west.yaml `
-    --stack-name vpn-west-stack `
+    --template-file 03-site-to-site-vpn/vpn-tgw-west.yaml `
+    --stack-name vpn-tgw-west-stack `
     --parameter-overrides `
-        VPCWestId=$VPCWestId `
+        TGWWestId=$TGWWestId `
         Site1PublicIP=$Site1IP `
         Site2PublicIP=$Site2IP `
+        WestPublicRTId=$WestPublicRT `
     --region us-west-2
 
 Write-Host "`n=== Step 9: Downloading VPN Configs ===" -ForegroundColor Cyan
 $VPNSite1EastId = (aws cloudformation describe-stacks `
-    --stack-name vpn-east-stack `
+    --stack-name vpn-tgw-east-stack `
     --query 'Stacks[0].Outputs[?OutputKey==`VPNSite1EastId`].OutputValue' `
     --output text --region us-east-1)
 
 $VPNSite2EastId = (aws cloudformation describe-stacks `
-    --stack-name vpn-east-stack `
+    --stack-name vpn-tgw-east-stack `
     --query 'Stacks[0].Outputs[?OutputKey==`VPNSite2EastId`].OutputValue' `
     --output text --region us-east-1)
 
 $VPNSite1WestId = (aws cloudformation describe-stacks `
-    --stack-name vpn-west-stack `
+    --stack-name vpn-tgw-west-stack `
     --query 'Stacks[0].Outputs[?OutputKey==`VPNSite1WestId`].OutputValue' `
     --output text --region us-west-2)
 
 $VPNSite2WestId = (aws cloudformation describe-stacks `
-    --stack-name vpn-west-stack `
+    --stack-name vpn-tgw-west-stack `
     --query 'Stacks[0].Outputs[?OutputKey==`VPNSite2WestId`].OutputValue' `
     --output text --region us-west-2)
-
+    
 aws ec2 describe-vpn-connections `
     --vpn-connection-ids $VPNSite1EastId `
     --query 'VpnConnections[0].CustomerGatewayConfiguration' `
