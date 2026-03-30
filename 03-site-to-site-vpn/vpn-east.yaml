@@ -11,6 +11,9 @@ Parameters:
   Site2PublicIP:
     Type: String
     Description: Public IP of Strongswan on-prem Site 2
+  EastPublicRTId:
+    Type: String
+    Description: East VPC public route table ID
 
 Resources:
 
@@ -83,7 +86,7 @@ Resources:
     DependsOn: VGWAttachEast
     Properties:
       RouteTableIds:
-        - rtb-0fa7ab2a60f78df4c
+        - !Ref EastPublicRTId
       VpnGatewayId: !Ref VGWEast
 
 Outputs:
