@@ -1,5 +1,4 @@
-Paste this in:
-yamlAWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Description: West Transit Gateway and VPC attachment (us-west-2)
 
 Parameters:

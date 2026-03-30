@@ -17,7 +17,6 @@ aws cloudformation deploy `
     --parameter-overrides `
         KeyPairName=$KEY_NAME `
         MyIPAddress=$MY_IP `
-        TGWEastId=PLACEHOLDER `
     --region us-east-1
 
 Write-Host "`n=== Step 2: Deploying West VPC ===" -ForegroundColor Cyan
@@ -27,7 +26,6 @@ aws cloudformation deploy `
     --parameter-overrides `
         KeyPairName=$KEY_NAME `
         MyIPAddress=$MY_IP `
-        TGWWestId=PLACEHOLDER `
     --region us-west-2
 
 Write-Host "`n=== Step 3: Deploying East TGW ===" -ForegroundColor Cyan
