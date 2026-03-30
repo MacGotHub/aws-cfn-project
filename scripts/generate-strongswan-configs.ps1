@@ -8,7 +8,8 @@
 function Write-UnixFile {
     param($Path, $Content)
     $Content = $Content -replace "`r`n", "`n"
-    [System.IO.File]::WriteAllText($Path, $Content)
+    $FullPath = Join-Path $PSScriptRoot "..\$Path"
+    [System.IO.File]::WriteAllText($FullPath, $Content)
 }
 
 function Parse-VPNConfig {
