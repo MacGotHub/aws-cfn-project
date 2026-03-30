@@ -405,6 +405,7 @@ New-Item -Path "scripts\site2-configs" -ItemType Directory -Force | Out-Null
 
 Write-UnixFile "scripts\site1-configs\ipsec.conf" $Site1IpsecConf
 Write-UnixFile "scripts\site1-configs\ipsec.secrets" $Site1Secrets
+Write-UnixFile "scripts\site1-configs\ipsec-vti.sh" $Site1VtiScript
 Write-UnixFile "scripts\site1-configs\bird.conf" $Site1BirdConf
 Write-UnixFile "scripts\site2-configs\ipsec.conf" $Site2IpsecConf
 Write-UnixFile "scripts\site2-configs\ipsec.secrets" $Site2Secrets
