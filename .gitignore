@@ -2,3 +2,5 @@
 *.key
 .aws/
 *.xml
+scripts/site1-configs/
+scripts/site2-configs/
