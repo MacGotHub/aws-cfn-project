@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Network Firewall East (us-east-1)
+
+Parameters:
+  InspectionVPCEastId:
+    Type: String
+    Description: Inspection VPC East ID
+  FirewallSubnetEastAZ1Id:
+    Type: String
+    Description: Firewall Subnet AZ1 ID
+  FirewallSubnetEastAZ2Id:
+    Type: String
+    Description: Firewall Subnet AZ2 ID
+  FirewallPolicyArn:
+    Type: String
+    Description: Firewall Policy ARN
+
+Resources:
+
+  # --- Network Firewall ---
+  NetworkFirewallEast:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: network-firewall-east
+      FirewallPolicyArn: !Ref FirewallPolicyArn
+      VpcId: !Ref InspectionVPCEastId
+      SubnetMappings:
+        - SubnetId: !Ref FirewallSubnetEastAZ1Id
+        - SubnetId: !Ref FirewallSubnetEastAZ2Id
+      DeleteProtection: false
+      FirewallPolicyChangeProtection: false
+      SubnetChangeProtection: false
+      Tags:
+        - Key: Name
+          Value: network-firewall-east
+
+  # --- Firewall Logging ---
+  FirewallLoggingEast:
+    Type: AWS::NetworkFirewall::LoggingConfiguration
+    Properties:
+      FirewallArn: !Ref NetworkFirewallEast
+      LoggingConfiguration:
+        LogDestinationConfigs:
+          - LogType: ALERT
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: /aws/network-firewall/east/alerts
+          - LogType: FLOW
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: /aws/network-firewall/east/flow
+
+Outputs:
+  NetworkFirewallEastArn:
+    Value: !Ref NetworkFirewallEast
+    Description: Network Firewall East ARN
+  NetworkFirewallEastId:
+    Value: !GetAtt NetworkFirewallEast.FirewallId
+    Description: Network Firewall East ID

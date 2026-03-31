@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Network Firewall West (us-west-2)
+
+Parameters:
+  InspectionVPCWestId:
+    Type: String
+    Description: Inspection VPC West ID
+  FirewallSubnetWestAZ1Id:
+    Type: String
+    Description: Firewall Subnet AZ1 ID
+  FirewallSubnetWestAZ2Id:
+    Type: String
+    Description: Firewall Subnet AZ2 ID
+  FirewallPolicyArn:
+    Type: String
+    Description: Firewall Policy ARN
+
+Resources:
+
+  # --- Network Firewall ---
+  NetworkFirewallWest:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: network-firewall-west
+      FirewallPolicyArn: !Ref FirewallPolicyArn
+      VpcId: !Ref InspectionVPCWestId
+      SubnetMappings:
+        - SubnetId: !Ref FirewallSubnetWestAZ1Id
+        - SubnetId: !Ref FirewallSubnetWestAZ2Id
+      DeleteProtection: false
+      FirewallPolicyChangeProtection: false
+      SubnetChangeProtection: false
+      Tags:
+        - Key: Name
+          Value: network-firewall-west
+
+  # --- Firewall Logging ---
+  FirewallLoggingWest:
+    Type: AWS::NetworkFirewall::LoggingConfiguration
+    Properties:
+      FirewallArn: !Ref NetworkFirewallWest
+      LoggingConfiguration:
+        LogDestinationConfigs:
+          - LogType: ALERT
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: /aws/network-firewall/west/alerts
+          - LogType: FLOW
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: /aws/network-firewall/west/flow
+
+Outputs:
+  NetworkFirewallWestArn:
+    Value: !Ref NetworkFirewallWest
+    Description: Network Firewall West ARN
+  NetworkFirewallWestId:
+    Value: !GetAtt NetworkFirewallWest.FirewallId
+    Description: Network Firewall West ID

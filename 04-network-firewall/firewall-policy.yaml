@@ -4,7 +4,7 @@ Description: AWS Network Firewall Policy with stateful rules, domain filtering, 
 Resources:
 
   # --- Stateful Rule Group - Allow established connections ---
-  StatefulRuleGroupAllowEstablished:
+ StatefulRuleGroupAllowEstablished:
     Type: AWS::NetworkFirewall::RuleGroup
     Properties:
       RuleGroupName: allow-established-connections
@@ -12,37 +12,15 @@ Resources:
       Capacity: 100
       RuleGroup:
         RulesSource:
-          StatefulRules:
-            - Action: PASS
-              Header:
-                Direction: ANY
-                Protocol: TCP
-                Source: ANY
-                SourcePort: ANY
-                Destination: ANY
-                DestinationPort: ANY
-              RuleOptions:
-                - Keyword: flow
-                  Settings:
-                    - established
-            - Action: PASS
-              Header:
-                Direction: ANY
-                Protocol: ICMP
-                Source: ANY
-                SourcePort: ANY
-                Destination: ANY
-                DestinationPort: ANY
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "1"
+          RulesString: |
+            pass tcp any any -> any any (flow:established; sid:100001; rev:1;)
+            pass icmp any any -> any any (sid:100002; rev:1;)
       Tags:
         - Key: Name
           Value: allow-established-connections
 
   # --- Stateful Rule Group - Allow internal traffic ---
-  StatefulRuleGroupAllowInternal:
+ StatefulRuleGroupAllowInternal:
     Type: AWS::NetworkFirewall::RuleGroup
     Properties:
       RuleGroupName: allow-internal-traffic
@@ -50,49 +28,16 @@ Resources:
       Capacity: 100
       RuleGroup:
         RulesSource:
-          StatefulRules:
-            - Action: PASS
-              Header:
-                Direction: ANY
-                Protocol: TCP
-                Source: 10.0.0.0/8
-                SourcePort: ANY
-                Destination: 10.0.0.0/8
-                DestinationPort: ANY
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "2"
-            - Action: PASS
-              Header:
-                Direction: ANY
-                Protocol: UDP
-                Source: 10.0.0.0/8
-                SourcePort: ANY
-                Destination: 10.0.0.0/8
-                DestinationPort: ANY
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "3"
-            - Action: PASS
-              Header:
-                Direction: ANY
-                Protocol: ICMP
-                Source: 10.0.0.0/8
-                SourcePort: ANY
-                Destination: 10.0.0.0/8
-                DestinationPort: ANY
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "4"
+          RulesString: |
+            pass tcp 10.0.0.0/8 any -> 10.0.0.0/8 any (sid:100003; rev:1;)
+            pass udp 10.0.0.0/8 any -> 10.0.0.0/8 any (sid:100004; rev:1;)
+            pass icmp 10.0.0.0/8 any -> 10.0.0.0/8 any (sid:100005; rev:1;)
       Tags:
         - Key: Name
           Value: allow-internal-traffic
 
   # --- Domain List Rule Group - Block malicious domains ---
-  DomainBlockRuleGroup:
+ DomainBlockRuleGroup:
     Type: AWS::NetworkFirewall::RuleGroup
     Properties:
       RuleGroupName: block-malicious-domains
@@ -114,7 +59,7 @@ Resources:
           Value: block-malicious-domains
 
   # --- IPS Rule Group - Suricata compatible signatures ---
-  IPSRuleGroup:
+ IPSRuleGroup:
     Type: AWS::NetworkFirewall::RuleGroup
     Properties:
       RuleGroupName: ips-signatures
@@ -131,7 +76,7 @@ Resources:
           Value: ips-signatures
 
   # --- Egress Rule Group - Control outbound traffic ---
-  EgressRuleGroup:
+ EgressRuleGroup:
     Type: AWS::NetworkFirewall::RuleGroup
     Properties:
       RuleGroupName: egress-filtering
@@ -139,49 +84,16 @@ Resources:
       Capacity: 100
       RuleGroup:
         RulesSource:
-          StatefulRules:
-            - Action: PASS
-              Header:
-                Direction: FORWARD
-                Protocol: TCP
-                Source: 10.0.0.0/8
-                SourcePort: ANY
-                Destination: ANY
-                DestinationPort: "443"
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "5"
-            - Action: PASS
-              Header:
-                Direction: FORWARD
-                Protocol: TCP
-                Source: 10.0.0.0/8
-                SourcePort: ANY
-                Destination: ANY
-                DestinationPort: "80"
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "6"
-            - Action: DROP
-              Header:
-                Direction: FORWARD
-                Protocol: TCP
-                Source: 10.0.0.0/8
-                SourcePort: ANY
-                Destination: ANY
-                DestinationPort: ANY
-              RuleOptions:
-                - Keyword: sid
-                  Settings:
-                    - "7"
+          RulesString: |
+            pass tcp 10.0.0.0/8 any -> any 443 (sid:100006; rev:1;)
+            pass tcp 10.0.0.0/8 any -> any 80 (sid:100007; rev:1;)
+            drop tcp 10.0.0.0/8 any -> any any (sid:100008; rev:1;)
       Tags:
         - Key: Name
           Value: egress-filtering
 
   # --- Firewall Policy ---
-  FirewallPolicy:
+ FirewallPolicy:
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
       FirewallPolicyName: main-firewall-policy
