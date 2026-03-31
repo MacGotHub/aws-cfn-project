@@ -1,0 +1,206 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Network Firewall Policy with stateful rules, domain filtering, IPS and egress filtering
+
+Resources:
+
+  # --- Stateful Rule Group - Allow established connections ---
+  StatefulRuleGroupAllowEstablished:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: allow-established-connections
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RulesSource:
+          StatefulRules:
+            - Action: PASS
+              Header:
+                Direction: ANY
+                Protocol: TCP
+                Source: ANY
+                SourcePort: ANY
+                Destination: ANY
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: flow
+                  Settings:
+                    - established
+            - Action: PASS
+              Header:
+                Direction: ANY
+                Protocol: ICMP
+                Source: ANY
+                SourcePort: ANY
+                Destination: ANY
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "1"
+      Tags:
+        - Key: Name
+          Value: allow-established-connections
+
+  # --- Stateful Rule Group - Allow internal traffic ---
+  StatefulRuleGroupAllowInternal:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: allow-internal-traffic
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RulesSource:
+          StatefulRules:
+            - Action: PASS
+              Header:
+                Direction: ANY
+                Protocol: TCP
+                Source: 10.0.0.0/8
+                SourcePort: ANY
+                Destination: 10.0.0.0/8
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "2"
+            - Action: PASS
+              Header:
+                Direction: ANY
+                Protocol: UDP
+                Source: 10.0.0.0/8
+                SourcePort: ANY
+                Destination: 10.0.0.0/8
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "3"
+            - Action: PASS
+              Header:
+                Direction: ANY
+                Protocol: ICMP
+                Source: 10.0.0.0/8
+                SourcePort: ANY
+                Destination: 10.0.0.0/8
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "4"
+      Tags:
+        - Key: Name
+          Value: allow-internal-traffic
+
+  # --- Domain List Rule Group - Block malicious domains ---
+  DomainBlockRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: block-malicious-domains
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RulesSource:
+          RulesSourceList:
+            TargetTypes:
+              - TLS_SNI
+              - HTTP_HOST
+            Targets:
+              - ".malware.example.com"
+              - ".badactor.example.com"
+              - ".cryptomining.example.com"
+            GeneratedRulesType: DENYLIST
+      Tags:
+        - Key: Name
+          Value: block-malicious-domains
+
+  # --- IPS Rule Group - Suricata compatible signatures ---
+  IPSRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: ips-signatures
+      Type: STATEFUL
+      Capacity: 200
+      RuleGroup:
+        RulesSource:
+          RulesString: |
+            alert tcp any any -> any any (msg:"ET SCAN Potential SSH Scan"; flow:stateless; flags:S,12; threshold:type both,track by_src,count 5,seconds 120; classtype:attempted-recon; sid:2001219; rev:20;)
+            alert tcp any any -> any 23 (msg:"ET POLICY Telnet Attempt"; flow:to_server,established; classtype:policy-violation; sid:2002911; rev:6;)
+            alert tcp any any -> any any (msg:"ET EXPLOIT Suspicious User-Agent"; content:"zgrab"; http_header; classtype:web-application-attack; sid:2024364; rev:3;)
+      Tags:
+        - Key: Name
+          Value: ips-signatures
+
+  # --- Egress Rule Group - Control outbound traffic ---
+  EgressRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: egress-filtering
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RulesSource:
+          StatefulRules:
+            - Action: PASS
+              Header:
+                Direction: FORWARD
+                Protocol: TCP
+                Source: 10.0.0.0/8
+                SourcePort: ANY
+                Destination: ANY
+                DestinationPort: "443"
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "5"
+            - Action: PASS
+              Header:
+                Direction: FORWARD
+                Protocol: TCP
+                Source: 10.0.0.0/8
+                SourcePort: ANY
+                Destination: ANY
+                DestinationPort: "80"
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "6"
+            - Action: DROP
+              Header:
+                Direction: FORWARD
+                Protocol: TCP
+                Source: 10.0.0.0/8
+                SourcePort: ANY
+                Destination: ANY
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: sid
+                  Settings:
+                    - "7"
+      Tags:
+        - Key: Name
+          Value: egress-filtering
+
+  # --- Firewall Policy ---
+  FirewallPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    Properties:
+      FirewallPolicyName: main-firewall-policy
+      FirewallPolicy:
+        StatelessDefaultActions:
+          - aws:forward_to_sfe
+        StatelessFragmentDefaultActions:
+          - aws:forward_to_sfe
+        StatefulRuleGroupReferences:
+          - ResourceArn: !Ref StatefulRuleGroupAllowEstablished
+          - ResourceArn: !Ref StatefulRuleGroupAllowInternal
+          - ResourceArn: !Ref DomainBlockRuleGroup
+          - ResourceArn: !Ref IPSRuleGroup
+          - ResourceArn: !Ref EgressRuleGroup
+      Tags:
+        - Key: Name
+          Value: main-firewall-policy
+
+Outputs:
+  FirewallPolicyArn:
+    Value: !Ref FirewallPolicy
+    Description: Firewall Policy ARN

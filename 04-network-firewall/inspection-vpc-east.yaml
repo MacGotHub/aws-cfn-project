@@ -1,0 +1,171 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Inspection VPC East (us-east-1) for AWS Network Firewall
+
+Resources:
+
+  # --- VPC ---
+  InspectionVPCEast:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.4.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: inspection-vpc-east
+
+  # --- Internet Gateway ---
+  IGWInspectionEast:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: igw-inspection-east
+
+  AttachIGWInspectionEast:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      InternetGatewayId: !Ref IGWInspectionEast
+
+  # --- Firewall Subnet AZ1 ---
+  FirewallSubnetEastAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      CidrBlock: 10.4.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: firewall-subnet-east-az1
+
+  # --- Firewall Subnet AZ2 ---
+  FirewallSubnetEastAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      CidrBlock: 10.4.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: firewall-subnet-east-az2
+
+  # --- GWLB Subnet AZ1 ---
+  GWLBSubnetEastAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      CidrBlock: 10.4.3.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: gwlb-subnet-east-az1
+
+  # --- GWLB Subnet AZ2 ---
+  GWLBSubnetEastAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      CidrBlock: 10.4.4.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: gwlb-subnet-east-az2
+
+  # --- TGW Attachment Subnet AZ1 ---
+  TGWSubnetEastAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      CidrBlock: 10.4.5.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: tgw-subnet-east-az1
+
+  # --- TGW Attachment Subnet AZ2 ---
+  TGWSubnetEastAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      CidrBlock: 10.4.6.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: tgw-subnet-east-az2
+
+  # --- Route Table ---
+  InspectionRTEast:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref InspectionVPCEast
+      Tags:
+        - Key: Name
+          Value: inspection-rt-east
+
+  InspectionRouteEast:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIGWInspectionEast
+    Properties:
+      RouteTableId: !Ref InspectionRTEast
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGWInspectionEast
+
+  FirewallSubnetAZ1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirewallSubnetEastAZ1
+      RouteTableId: !Ref InspectionRTEast
+
+  FirewallSubnetAZ2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirewallSubnetEastAZ2
+      RouteTableId: !Ref InspectionRTEast
+
+  GWLBSubnetAZ1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref GWLBSubnetEastAZ1
+      RouteTableId: !Ref InspectionRTEast
+
+  GWLBSubnetAZ2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref GWLBSubnetEastAZ2
+      RouteTableId: !Ref InspectionRTEast
+
+  TGWSubnetAZ1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TGWSubnetEastAZ1
+      RouteTableId: !Ref InspectionRTEast
+
+  TGWSubnetAZ2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TGWSubnetEastAZ2
+      RouteTableId: !Ref InspectionRTEast
+
+Outputs:
+  InspectionVPCEastId:
+    Value: !Ref InspectionVPCEast
+    Description: Inspection VPC East ID
+  FirewallSubnetEastAZ1Id:
+    Value: !Ref FirewallSubnetEastAZ1
+    Description: Firewall Subnet AZ1 ID
+  FirewallSubnetEastAZ2Id:
+    Value: !Ref FirewallSubnetEastAZ2
+    Description: Firewall Subnet AZ2 ID
+  GWLBSubnetEastAZ1Id:
+    Value: !Ref GWLBSubnetEastAZ1
+    Description: GWLB Subnet AZ1 ID
+  GWLBSubnetEastAZ2Id:
+    Value: !Ref GWLBSubnetEastAZ2
+    Description: GWLB Subnet AZ2 ID
+  TGWSubnetEastAZ1Id:
+    Value: !Ref TGWSubnetEastAZ1
+    Description: TGW Subnet AZ1 ID
+  TGWSubnetEastAZ2Id:
+    Value: !Ref TGWSubnetEastAZ2
+    Description: TGW Subnet AZ2 ID

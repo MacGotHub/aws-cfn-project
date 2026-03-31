@@ -1,0 +1,171 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Inspection VPC West (us-west-2) for AWS Network Firewall
+
+Resources:
+
+  # --- VPC ---
+  InspectionVPCWest:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.5.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: inspection-vpc-west
+
+  # --- Internet Gateway ---
+  IGWInspectionWest:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: igw-inspection-west
+
+  AttachIGWInspectionWest:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      InternetGatewayId: !Ref IGWInspectionWest
+
+  # --- Firewall Subnet AZ1 ---
+  FirewallSubnetWestAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      CidrBlock: 10.5.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: firewall-subnet-west-az1
+
+  # --- Firewall Subnet AZ2 ---
+  FirewallSubnetWestAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      CidrBlock: 10.5.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: firewall-subnet-west-az2
+
+  # --- GWLB Subnet AZ1 ---
+  GWLBSubnetWestAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      CidrBlock: 10.5.3.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: gwlb-subnet-west-az1
+
+  # --- GWLB Subnet AZ2 ---
+  GWLBSubnetWestAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      CidrBlock: 10.5.4.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: gwlb-subnet-west-az2
+
+  # --- TGW Attachment Subnet AZ1 ---
+  TGWSubnetWestAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      CidrBlock: 10.5.5.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: tgw-subnet-west-az1
+
+  # --- TGW Attachment Subnet AZ2 ---
+  TGWSubnetWestAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      CidrBlock: 10.5.6.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: tgw-subnet-west-az2
+
+  # --- Route Table ---
+  InspectionRTWest:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref InspectionVPCWest
+      Tags:
+        - Key: Name
+          Value: inspection-rt-west
+
+  InspectionRouteWest:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIGWInspectionWest
+    Properties:
+      RouteTableId: !Ref InspectionRTWest
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGWInspectionWest
+
+  FirewallSubnetAZ1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirewallSubnetWestAZ1
+      RouteTableId: !Ref InspectionRTWest
+
+  FirewallSubnetAZ2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirewallSubnetWestAZ2
+      RouteTableId: !Ref InspectionRTWest
+
+  GWLBSubnetAZ1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref GWLBSubnetWestAZ1
+      RouteTableId: !Ref InspectionRTWest
+
+  GWLBSubnetAZ2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref GWLBSubnetWestAZ2
+      RouteTableId: !Ref InspectionRTWest
+
+  TGWSubnetAZ1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TGWSubnetWestAZ1
+      RouteTableId: !Ref InspectionRTWest
+
+  TGWSubnetAZ2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TGWSubnetWestAZ2
+      RouteTableId: !Ref InspectionRTWest
+
+Outputs:
+  InspectionVPCWestId:
+    Value: !Ref InspectionVPCWest
+    Description: Inspection VPC West ID
+  FirewallSubnetWestAZ1Id:
+    Value: !Ref FirewallSubnetWestAZ1
+    Description: Firewall Subnet AZ1 ID
+  FirewallSubnetWestAZ2Id:
+    Value: !Ref FirewallSubnetWestAZ2
+    Description: Firewall Subnet AZ2 ID
+  GWLBSubnetWestAZ1Id:
+    Value: !Ref GWLBSubnetWestAZ1
+    Description: GWLB Subnet AZ1 ID
+  GWLBSubnetWestAZ2Id:
+    Value: !Ref GWLBSubnetWestAZ2
+    Description: GWLB Subnet AZ2 ID
+  TGWSubnetWestAZ1Id:
+    Value: !Ref TGWSubnetWestAZ1
+    Description: TGW Subnet AZ1 ID
+  TGWSubnetWestAZ2Id:
+    Value: !Ref TGWSubnetWestAZ2
+    Description: TGW Subnet AZ2 ID
